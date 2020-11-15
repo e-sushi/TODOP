@@ -15,6 +15,7 @@ import time
 #for push webhooks from a repository
 
 #important stuff here
+#ENTER_GITHUB_PERSONAL_ACCESS_TOKEN_HERE
 GITTOKEN = "ENTER_GITHUB_PERSONAL_ACCESS_TOKEN_HERE"
 REPO = "SushiSalad/P3DPGE"
 APP_ID = 88527
@@ -45,7 +46,6 @@ def find_files_git(repo, exts):
 			for ext in exts:
 				if file.name.endswith(ext):
 					files.append(file)
-					print(file.name)
 	return files;
 
 def find_files(dir_name, exts):
@@ -70,23 +70,50 @@ def getTODOs(file):
 		line_num += 1
 	return TODOs
 	
-			
+def getTags(tagsList):
+	Tags = []
+	for tag in tagsList:
+		if "+" in tag:
+			Tags.append("GitIssue")
+		if "s" in tag and "u" in tag:
+			Tags.append("CHECK_TAGS")
+		else:
+			if "s" in tag:
+				Tags.append("Severe")
+			if "u" in tag:
+				Tags.append("Unimportant")
+		if "p" in tag:
+			Tags.append("Physics")
+		if "r" in tag:
+			Tags.append("Render")
+		if "e" in tag:
+			Tags.append("Entity")
+		if "i" in tag:
+			Tags.append("Input")
+		if "m" in tag:
+			Tags.append("Math")
+		if "o" in tag:
+			Tags.append("Optimization")
+		if "g" in tag:
+			Tags.append("General")
+		if "c" in tag:
+			Tags.append("Clean-Code")
+	if len(Tags) == 0:
+		Tags.append("No Tags")
+	return Tags
 
 def main():
-
 	g = Github(GITTOKEN)
 	repo = g.get_repo(REPO)
-
-	filePaths = find_files_git(repo, ['.cpp', '.h'])
 	
 	code = open("code.txt", "w")
-
 	if not os.path.exists("code"):
 		os.makedirs("code")
 
 	#turn decoded files into usable shit
 	wrote_new = False
 	wrote_tab = False
+	filePaths = find_files_git(repo, ['.cpp', '.h'])
 	for file in filePaths:
 		temp_code = open("code\\" + file.name, "w")
 		for b, a in zip(str(file.decoded_content), str(file.decoded_content)[1:]):
@@ -107,117 +134,70 @@ def main():
 						wrote_new = False
 						wrote_tab = False
 
+	print("\n-Collecting TODOs")
 	TODOs = []
-	with open("TODOs_GIT.txt", "w+") as TODOList:
+	filePaths = find_files("code\\", ['.cpp', '.h'])
+	for filePath in filePaths:
+		file = open(filePath, 'r')
+		fileTODOS = getTODOs(file)
+		TODOs.extend(fileTODOS)
+		print("  %d TODOs from %s" % (len(fileTODOS), filePath.split("\\")[-1]))
+		file.flush()
+		file.close()
+	print("-Collected %d TODOs from %d files" % (len(TODOs), len(filePaths)))
 
-		filePaths = find_files("code\\", ['.cpp', '.h'])
-		for filePath in filePaths:
-			file = open(filePath, 'r')
-			TODOs.extend(getTODOs(file))
-			file.flush()
-			file.close()
-		print(filePaths)
+	#make room for listing number of TODOs later
+	TODOList = open("TODOs_GIT.txt", "w+")
+	TODOList.write("TODO List successfully generated with " + str(len(TODOs)) + " TODOs found.\n\n")
+	TODO_num = 0
+	for file_name, line_num, arguments, body in TODOs:
+		Tags = getTags(arguments[0])
 
-		#make room for listing number of TODOs later
-		TODOList.write("TODO List successfully generated with " + str(len(TODOs)) + " TODOs found.\n\n")
-
-		TODO_num = 0
-		for file_name, line_num, arguments, body in TODOs:
-		
-			Tags = []
-
-			#this looks so FUCKING bad
-
-			#get tags
-			argument = arguments[0]
-			for arg in argument:
-				if "+" in arg:
-					Tags.append("GitIssue")
-				if "s" in arg and "u" in arg:
-					Tags.append("CHECK_TAGS")
-				else:
-					if "s" in arg:
-						Tags.append("Severe")
-					if "u" in arg:
-						Tags.append("Unimportant")
-				if "p" in arg:
-					Tags.append("Physics")
-				if "r" in arg:
-					Tags.append("Render")
-				if "e" in arg:
-					Tags.append("Entity")
-				if "i" in arg:
-					Tags.append("Input")
-				if "m" in arg:
-					Tags.append("Math")
-				if "o" in arg:
-					Tags.append("Optimization")
-				if "g" in arg:
-					Tags.append("General")
-				if "c" in arg:
-					Tags.append("Clean-Code")
-			if len(Tags) == 0:
-				Tags.append("No Tags")
-
-			#start writing everything
-			creator = arguments[1]
-			TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~")
-			
-			TODOList.write("\n")
-			if len(arguments) == 4:
-				title = arguments[3]
-				TODOList.write("Title: " + title)
-				TODOList.write("\n")
-
-			TODOList.write("in file " + file_name[file_name.rfind("\\") + 1:] + " at line " + str(line_num))
-			TODOList.write("\n")
-			TODOList.write("created by: " + creator)
-			if len(arguments) == 5:
-				TODOList.write(" and assigned to " + arguments[4])
-			TODOList.write("\n")
-			TODOList.write("----------------------")
-			TODOList.write("\n")
-
-			if len(arguments) == 3:
-				date = arguments[2]
-				TODOList.write("Date: " + date)
-				TODOList.write("\n")
-
-			TODOList.write("Tags: ")
-			for i, tag in enumerate(Tags):
-				TODOList.write(tag)
-				if i != len(Tags) - 1:
-					TODOList.write(", ")
-
-			TODOList.write("\n")
-			TODOList.write("----------------------\n")
-
-			if body[0] == " ":
-				TODOList.write(body[1:])
-			else:
-				TODOList.write(body)
-
-			TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~")
-			TODOList.write("\n\n\n")
-			TODO_num += 1
-
-		TODOList.seek(0)
-		#check if TODOs.txt exists in repo
-		repo_files = []
-		contents = repo.get_contents("")
-		while contents:
-			file = contents.pop(0)
-			if file.type == "dir":
-				contents.extend(repo.get_contents(file.path))
-			else:
-				repo_files.append(file.name)
-
-		if "TODOs.txt" in repo_files:
-			contents = repo.get_contents("TODOs.txt")
-			repo.update_file(contents.path, "Update TODOs", TODOList.read(), contents.sha)
+		#writes all the TODOs to the file with formatting
+		TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~\n")
+		if len(arguments) == 4: TODOList.write("Title: " + arguments[3] + "\n")
+		TODOList.write(file_name[file_name.rfind("\\") + 1:] + ", Line: " + str(line_num) + "\n")
+		TODOList.write("Creator: " + arguments[1] + "\n")
+		if len(arguments) == 5: TODOList.write("Assigned to:" + arguments[4] + "\n")
+		TODOList.write("----------------------\n")
+		if len(arguments) == 3: TODOList.write("Date: " + arguments[2] + "\n")
+		TODOList.write("Tags: ")
+		for i, tag in enumerate(Tags):
+			TODOList.write(tag)
+			if i != len(Tags) - 1: TODOList.write(", ")
+		TODOList.write("\n----------------------\n")
+		if body[0] == " ":
+			TODOList.write(body[1:])
 		else:
-			repo.create_file("TODOs.txt", "Create TODOs.txt", TODOList.read())
-					
+			TODOList.write(body)
+		#TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~")
+		#TODOList.write("\n\n\n")
+		TODOList.write("\n")
+		TODO_num += 1
+		
+		#updates all the TODO issues
+		
+
+	#updates the repo's TODO.txt file
+	TODOList.seek(0)
+	repo_files = []
+	contents = repo.get_contents("")
+	while contents:
+		file = contents.pop(0)
+		if file.type == "dir":
+			contents.extend(repo.get_contents(file.path))
+		else:
+			repo_files.append(file.name)
+
+	if "TODOs.txt" in repo_files:
+		contents = repo.get_contents("TODOs.txt")
+		repo.update_file(contents.path, "Update TODOs", TODOList.read(), contents.sha)
+	#else:
+		repo.create_file("TODOs.txt", "Create TODOs.txt", TODOList.read())
+	print("-Finished updating TODOs on Github")
+	TODOList.close()
+	
+	
 
 if __name__ == "__main__":
 	main()
