@@ -15,7 +15,7 @@ import time
 #for push webhooks from a repository
 
 #important stuff here
-GITTOKEN = "TOKEN HERE"
+GITTOKEN = "ENTER_GITHUB_PERSONAL_ACCESS_TOKEN_HERE"
 REPO = "SushiSalad/P3DPGE"
 APP_ID = 88527
 
@@ -84,10 +84,6 @@ def main():
 	if not os.path.exists("code"):
 		os.makedirs("code")
 
-	
-	
-
-
 	#turn decoded files into usable shit
 	wrote_new = False
 	wrote_tab = False
@@ -112,7 +108,7 @@ def main():
 						wrote_tab = False
 
 	TODOs = []
-	with open("TODOs_GIT.txt", "w") as TODOList:
+	with open("TODOs_GIT.txt", "w+") as TODOList:
 
 		filePaths = find_files("code\\", ['.cpp', '.h'])
 		for filePath in filePaths:
@@ -121,8 +117,6 @@ def main():
 			file.flush()
 			file.close()
 		print(filePaths)
-
-		
 
 		#make room for listing number of TODOs later
 		TODOList.write("TODO List successfully generated with " + str(len(TODOs)) + " TODOs found.\n\n")
@@ -207,6 +201,7 @@ def main():
 			TODOList.write("\n\n\n")
 			TODO_num += 1
 
+		TODOList.seek(0)
 		#check if TODOs.txt exists in repo
 		repo_files = []
 		contents = repo.get_contents("")
@@ -216,14 +211,13 @@ def main():
 				contents.extend(repo.get_contents(file.path))
 			else:
 				repo_files.append(file.name)
-		
+
 		if "TODOs.txt" in repo_files:
 			contents = repo.get_contents("TODOs.txt")
-			repo.update(contents.path, "Updating TODOs.txt", "TODOs_GIT.txt")
+			repo.update_file(contents.path, "Update TODOs", TODOList.read(), contents.sha)
 		else:
-			repo.create_file("/TODOs.txt", "Creating TODOs.txt", "TODOs_GIT.txt")
-
-
+			repo.create_file("TODOs.txt", "Create TODOs.txt", TODOList.read())
+					
 
 if __name__ == "__main__":
 	main()
