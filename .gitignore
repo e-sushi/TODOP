@@ -1,0 +1,10 @@
+
+.vs/TODOP/v16/.suo
+TODOP/TODOP.pyproj
+TODOP.sln
+
+*.cpp
+*.hpp
+*.h
+*.c
+*.txt

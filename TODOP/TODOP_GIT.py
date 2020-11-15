@@ -15,7 +15,7 @@ import time
 #for push webhooks from a repository
 
 #important stuff here
-GITTOKEN = "8998a63aa001e608de31423ca5d05daf0408d89a"
+GITTOKEN = "TOKEN HERE"
 REPO = "SushiSalad/P3DPGE"
 APP_ID = 88527
 
@@ -81,10 +81,12 @@ def main():
 	
 	code = open("code.txt", "w")
 
-	code_list = []
-
 	if not os.path.exists("code"):
 		os.makedirs("code")
+
+	
+	
+
 
 	#turn decoded files into usable shit
 	wrote_new = False
@@ -119,15 +121,6 @@ def main():
 			file.flush()
 			file.close()
 		print(filePaths)
-
-		for filePath in filePaths:
-			while True:
-				try:
-					os.remove(filePath)
-					break
-				except:
-					time.sleep(1)
-			
 
 		
 
@@ -213,6 +206,23 @@ def main():
 			TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~")
 			TODOList.write("\n\n\n")
 			TODO_num += 1
+
+		#check if TODOs.txt exists in repo
+		repo_files = []
+		contents = repo.get_contents("")
+		while contents:
+			file = contents.pop(0)
+			if file.type == "dir":
+				contents.extend(repo.get_contents(file.path))
+			else:
+				repo_files.append(file.name)
+		
+		if "TODOs.txt" in repo_files:
+			contents = repo.get_contents("TODOs.txt")
+			repo.update(contents.path, "Updating TODOs.txt", "TODOs_GIT.txt")
+		else:
+			repo.create_file("/TODOs.txt", "Creating TODOs.txt", "TODOs_GIT.txt")
+
 
 
 if __name__ == "__main__":
