@@ -14,15 +14,13 @@ import time
 #this version of TODOP is meant to be ran as a server that listens
 #for push webhooks from a repository
 
+#this is very hacked together sorry lol
+
 #important stuff here
-#ENTER_GITHUB_PERSONAL_ACCESS_TOKEN_HERE
 GITTOKEN = "ENTER_GITHUB_PERSONAL_ACCESS_TOKEN_HERE"
-REPO = "SushiSalad/P3DPGE"
-APP_ID = 88527
+REPO = "REPO"
 
 app = Flask(__name__)
-
-
 
 @app.route('/webhook', methods=['POST'])
 def respond():
@@ -33,7 +31,7 @@ def respond():
 
 @app.route('/', methods=['GET'])
 def hello_world():
-	return "TODOP time"
+	return "TODOP TIME!"
 
 def find_files_git(repo, exts):
 	contents = repo.get_contents("")
@@ -72,6 +70,7 @@ def getTODOs(file):
 	
 def getTags(tagsList):
 	Tags = []
+	Tags.append("TODOP")
 	for tag in tagsList:
 		if "+" in tag:
 			Tags.append("GitIssue")
@@ -79,25 +78,25 @@ def getTags(tagsList):
 			Tags.append("CHECK_TAGS")
 		else:
 			if "s" in tag:
-				Tags.append("Severe")
+				Tags.append("severe")
 			if "u" in tag:
-				Tags.append("Unimportant")
+				Tags.append("unimportant")
 		if "p" in tag:
-			Tags.append("Physics")
+			Tags.append("physics")
 		if "r" in tag:
-			Tags.append("Render")
+			Tags.append("render")
 		if "e" in tag:
-			Tags.append("Entity")
+			Tags.append("entity")
 		if "i" in tag:
-			Tags.append("Input")
+			Tags.append("input")
 		if "m" in tag:
-			Tags.append("Math")
+			Tags.append("math")
 		if "o" in tag:
-			Tags.append("Optimization")
+			Tags.append("optimization")
 		if "g" in tag:
-			Tags.append("General")
+			Tags.append("general")
 		if "c" in tag:
-			Tags.append("Clean-Code")
+			Tags.append("clean up")
 	if len(Tags) == 0:
 		Tags.append("No Tags")
 	return Tags
@@ -155,12 +154,16 @@ def main():
 
 		#writes all the TODOs to the file with formatting
 		TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~\n")
-		if len(arguments) == 4: TODOList.write("Title: " + arguments[3] + "\n")
+		#write title if there is one
+		if len(arguments) >= 4: TODOList.write("Title: " + arguments[3] + "\n")
+		#write the file the TODO was found in and what line
 		TODOList.write(file_name[file_name.rfind("\\") + 1:] + ", Line: " + str(line_num) + "\n")
+		#write the creator's name
 		TODOList.write("Creator: " + arguments[1] + "\n")
-		if len(arguments) == 5: TODOList.write("Assigned to:" + arguments[4] + "\n")
 		TODOList.write("----------------------\n")
-		if len(arguments) == 3: TODOList.write("Date: " + arguments[2] + "\n")
+		#write the date signed on the TODO
+		if len(arguments) >= 3: TODOList.write("Date: " + arguments[2] + "\n")
+		#write tags
 		TODOList.write("Tags: ")
 		for i, tag in enumerate(Tags):
 			TODOList.write(tag)
@@ -170,13 +173,49 @@ def main():
 			TODOList.write(body[1:])
 		else:
 			TODOList.write(body)
-		#TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~")
-		#TODOList.write("\n\n\n")
 		TODOList.write("\n")
 		TODO_num += 1
 		
 		#updates all the TODO issues
 		
+		#create a new issue in the repo if an issue has the "+" tag
+		make_issue = True
+		if "GitIssue" in Tags and "CHECK_TAGS" not in Tags:
+			#tags to labels
+			_labels = []
+			repolabels = repo.get_labels()
+			for label in repolabels:
+				if label.name in Tags:
+					_labels.append(label)
+			print(_labels)
+
+			open_issues = repo.get_issues(state = 'open')
+			for issue in open_issues:
+				if len(arguments) == 4:
+					if issue.title == arguments[3]:
+						make_issue = False
+				elif issue.title == body[:20]:
+					make_issue = False
+
+			if make_issue:
+				il = open("open_issues.txt", "a")
+				if len(arguments) >= 3: TSign = "\nTODO created by " + arguments[1] + " on " + arguments[2] + "\nThis issue is located in file " + file_name[file_name.rfind("\\") + 1:] + " on line " + str(line_num) + "\n\nGenerated automatically by TODOP.py"
+				else: TSign = "\nTODO created by " + arguments[1] + "\nGenerated automatically by TODOP.py"
+				#create with title and assignee
+				if len(arguments) == 5: 
+					issue = repo.create_issue(arguments[3], body + TSign, labels = _labels)
+				
+				#create with title
+				elif len(arguments) == 4: 
+					issue = repo.create_issue(arguments[3], body + TSign, labels = _labels)
+
+				#create with part of body as title
+				elif len(arguments) <= 3: 
+					issue = repo.create_issue(body[:20] + "...", body + TSign, labels = _labels)
+
+					
+	
+
 
 	#updates the repo's TODO.txt file
 	TODOList.seek(0)
@@ -191,16 +230,36 @@ def main():
 
 	if "TODOs.txt" in repo_files:
 		contents = repo.get_contents("TODOs.txt")
-		repo.update_file(contents.path, "Update TODOs", TODOList.read(), contents.sha)
-	#else:
+		repo.update_file("TODOs.txt", "Update TODOs", TODOList.read(), contents.sha)
+	else:
 		repo.create_file("TODOs.txt", "Create TODOs.txt", TODOList.read())
 	print("-Finished updating TODOs on Github")
-	TODOList.close()
+
+	#close issues if they no longer exist in the files
+	TODOP_LABEL = []
+	TODOP_LABEL.append(repo.get_label("TODOP"))
+	issues = repo.get_issues(labels = TODOP_LABEL)
+	title = ""
+	print(issues)
+	for issue in issues:
+		print("Looking for: " + issue.title)
+		TODOList.seek(0)
+		delete = True
+		if issue.title.endswith("..."):
+			title = issue.title[:issue.title.find("...")]
+		else:
+			title = issue.title
+		for line in TODOList:
+			if title[1:] in line:
+				delete = False
+		if delete:
+			print("\nClosing " + issue.title + "because it was not found in the latest TODO scan.")
+			issue.edit(state="close")
 	
 	
 
 if __name__ == "__main__":
-	main()
-	#app.run(host="0.0.0.0", port = 80, threaded = True, debug = False)
+	#main()
+	app.run(host="0.0.0.0", port = 80, threaded = True, debug = False)
 	
 	
