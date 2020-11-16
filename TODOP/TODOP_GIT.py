@@ -1,4 +1,3 @@
-
 import os
 import sys
 import fileinput
@@ -6,14 +5,9 @@ from github import Github
 import github
 from flask import Flask, request, Response
 import json
-import base64
-import time
-
-#events are received 5 minutes after they occur
 
 #this version of TODOP is meant to be ran as a server that listens
 #for push webhooks from a repository
-
 #this is very hacked together sorry lol
 
 #important stuff here
@@ -214,10 +208,6 @@ def main():
 				#create with part of body as title
 				elif len(arguments) <= 3: 
 					issue = repo.create_issue(body[:20] + "...", body + TSign, labels = _labels)
-
-					
-	
-
 
 	#updates the repo's TODO.txt file
 	TODOList.seek(0)
