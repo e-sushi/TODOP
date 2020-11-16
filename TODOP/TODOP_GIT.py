@@ -17,19 +17,21 @@ import time
 #this is very hacked together sorry lol
 
 #important stuff here
-GITTOKEN = "ENTER_GITHUB_PERSONAL_ACCESS_TOKEN_HERE"
-REPO = "REPO"
+GITTOKEN = "YOUR_GIT_TOKEN_HERE"
+REPO = "YOUR_REPO_HERE"
 
 app = Flask(__name__)
 
 @app.route('/webhook', methods=['POST'])
 def respond():
 	payload = request.get_json()
-	print(payload)
-	main()
+	p = payload['pusher']['name']
+	if "TODOPBOT" not in p:
+		main()
+
 	return Response(status=200)
 
-@app.route('/', methods=['GET'])
+@app.route('/index.html', methods=['GET'])
 def hello_world():
 	return "TODOP TIME!"
 
@@ -230,7 +232,9 @@ def main():
 
 	if "TODOs.txt" in repo_files:
 		contents = repo.get_contents("TODOs.txt")
-		repo.update_file("TODOs.txt", "Update TODOs", TODOList.read(), contents.sha)
+		sha = repo.get_branch(branch="master").commit.sha
+		commit = repo.get_commit(sha=sha)
+		repo.update_file("TODOs.txt", commit.author.login + ": " + commit.commit.message, TODOList.read(), contents.sha)
 	else:
 		repo.create_file("TODOs.txt", "Create TODOs.txt", TODOList.read())
 	print("-Finished updating TODOs on Github")
@@ -259,7 +263,6 @@ def main():
 	
 
 if __name__ == "__main__":
-	#main()
 	app.run(host="0.0.0.0", port = 80, threaded = True, debug = False)
 	
 	
