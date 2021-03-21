@@ -1,15 +1,27 @@
 import os
 import sys
 import fileinput
+from github import Github
+import github
+from flask import Flask, request, Response
+import json
+
+
+
+
+src_dir = "C:\\Users\\sushi\\Documents\\GitHub\\deshi\\src"
+
+ignore_dirs = ["imgui", "saschawillems", "draudio", "stb", "tinyobjloader"] #put the name of folders you want to ignore here
 
 def find_files(dir_name, exts):
 	filepaths = []
-	
 	for root, dirs, files in os.walk(dir_name):
-		for file in files:
-			for ext in exts:
-				if file.endswith(ext):
-					filepaths.append(os.path.join(root, file))
+		if os.path.split(root)[1] not in ignore_dirs:	
+			print(os.path.split(root)[1])
+			for file in files:
+				for ext in exts:
+					if file.endswith(ext):
+						filepaths.append(os.path.join(root, file))
 	return filepaths
 
 def getTODOs(file):
@@ -24,111 +36,109 @@ def getTODOs(file):
 		line_num += 1
 	return TODOs
 	
-			
+def getTags(tagsList):
+	Tags = []
+	for tag in tagsList:
+		if "Ph" in tag:
+			Tags.append("physics")
+		if "Re" in tag:
+			Tags.append("render")
+		if "En" in tag:
+			Tags.append("entity")
+		if "In" in tag:
+			Tags.append("input")
+		if "Ma" in tag:
+			Tags.append("math")
+		if "Op" in tag:
+			Tags.append("optimization")
+		if "Ge" in tag:
+			Tags.append("general")
+		if "Cl" in tag:
+			Tags.append("clean up")
+		if "UI" in tag:
+			Tags.append("UI")
+		if "Vu" in tag:
+			Tags.append("Vulkan")
+		if "Sh" in tag:
+			Tags.append("shader")
+		if "Co" in tag:
+			Tags.append("core")
+		if "Geo" in tag:
+			Tags.append("geometry")
+		if "So" in tag:
+			Tags.append("sound")
+		if "Fs" in tag:
+			Tags.append("filesystem")
+		if "Cmd" in tag:
+			Tags.append("command")
+		if "Con" in tag:
+			Tags.append("console")
+		if "Wi" in tag:
+			Tags.append("window")
+		if "Fu" in tag:
+			Tags.append("fun")
+		if "Oth" in tag:
+			Tags.append("other")
+	if len(Tags) == 0:
+		Tags.append("No Tags")
+	return Tags
 
-def main(src_dir):
 
-	TODOs = []
-	with open("TODOs.txt", "w") as TODOList:
 
-		filePaths = find_files(src_dir, ['.cpp', '.h'])
-		for filePath in filePaths:
-			file = open(filePath, 'r+')
-			TODOs.extend(getTODOs(file))
-		print(filePaths)
+TODOs = []
+	
+print("\n-Collecting TODOs")
+	
+filePaths = find_files(src_dir, ['.cpp', '.h'])
+for filePath in filePaths:
+	file = open(filePath, 'r+')
+	TODOs.extend(getTODOs(file))
+#print(filePaths)
+	
+print("-Collected %d TODOs from %d files" % (len(TODOs), len(filePaths)))
 
-		#make room for listing number of TODOs later
-		TODOList.write("TODO List successfully generated with " + str(len(TODOs)) + " TODOs found.\n\n")
+#make room for listing number of TODOs later
+TODOList = open("TODOs.txt", "w+")
+TODOList.write("TODO List successfully generated with " + str(len(TODOs)) + " TODOs found.\n\n")
+TODO_num = 0
+for file_name, line_num, arguments, body in TODOs:
 
-		TODO_num = 0
-		for file_name, line_num, arguments, body in TODOs:
+	#writes all the TODOs to the file with formatting
+	TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~\n")
+	#write the creator's name
+	TODOList.write("Creator: " + arguments[0] + "\n")
+	TODOList.write("----------------------\n")
+	Tags = []
+	if len(arguments) >= 2:
+		Tags = getTags(arguments[1])
+	print(file_name, line_num, body)
+	#write the file the TODO was found in and what line
+	TODOList.write(file_name[file_name.rfind("\\") + 1:] + ", Line: " + str(line_num) + "\n")
+	
+	#write the date signed on the TODO
+	if len(arguments) >= 3: TODOList.write("Date: " + arguments[2] + "\n")
+	#write tags
+	if len(Tags) > 0:
+		TODOList.write("Tags: ")
+		for i, tag in enumerate(Tags):
+			TODOList.write(tag)
+			if i != len(Tags) - 1: TODOList.write(", ")
+	else:
+		TODOList.write("No tags.")
+	TODOList.write("\n----------------------\n")
+	if body[0] == " ":
+		TODOList.write(body[1:])
+	else:
+		TODOList.write(body)
+	TODOList.write("\n")
+	TODO_num += 1
 		
-			Tags = []
-
-			#this looks so FUCKING bad
-
-			#get tags
-			argument = arguments[0]
-			for arg in argument:
-				if "+" in arg:
-					Tags.append("GitIssue")
-				if "s" in arg and "u" in arg:
-					Tags.append("CHECK_TAGS")
-				else:
-					if "s" in arg:
-						Tags.append("Severe")
-					if "u" in arg:
-						Tags.append("Unimportant")
-				if "p" in arg:
-					Tags.append("Physics")
-				if "r" in arg:
-					Tags.append("Render")
-				if "e" in arg:
-					Tags.append("Entity")
-				if "i" in arg:
-					Tags.append("Input")
-				if "m" in arg:
-					Tags.append("Math")
-				if "o" in arg:
-					Tags.append("Optimization")
-				if "g" in arg:
-					Tags.append("General")
-				if "c" in arg:
-					Tags.append("Clean-Code")
-			if len(Tags) == 0:
-				Tags.append("No Tags")
-
-			#start writing everything
-			creator = arguments[1]
-			TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~")
-			
-			TODOList.write("\n")
-			if len(arguments) == 4:
-				title = arguments[3]
-				TODOList.write("Title: " + title)
-				TODOList.write("\n")
-
-			TODOList.write("in file " + file_name[file_name.rfind("\\") + 1:] + " at line " + str(line_num))
-			TODOList.write("\n")
-			TODOList.write("created by: " + creator)
-			if len(arguments) == 5:
-				TODOList.write(" and assigned to " + arguments[4])
-			TODOList.write("\n")
-			TODOList.write("----------------------")
-			TODOList.write("\n")
-
-			if len(arguments) == 3:
-				date = arguments[2]
-				TODOList.write("Date: " + date)
-				TODOList.write("\n")
-
-			TODOList.write("Tags: ")
-			for i, tag in enumerate(Tags):
-				TODOList.write(tag)
-				if i != len(Tags) - 1:
-					TODOList.write(", ")
-
-			TODOList.write("\n")
-			TODOList.write("----------------------\n")
-
-			if body[0] == " ":
-				TODOList.write(body[1:])
-			else:
-				TODOList.write(body)
-
-			TODOList.write("~~~~~~~ TODO " + str(TODO_num) + " ~~~~~~~")
-			TODOList.write("\n\n\n")
-			TODO_num += 1
-
-	print("TODOs.txt probably successfully made idk I haven't added error checking yet lol")
+	#updates all the TODO issues
+		
 
 
-if __name__ == "__main__":
-	useage = "\nUseage:\n    python TODOP.py src_folder_path \n    Eg: python TODOP.py C:\\Users\\YOU\\repos\\COOL_PROJECT"
-	if len(sys.argv) < 1:
-		print(useage)
-		exit()
-	if len(sys.argv) > 1:
-		src_dir = sys.argv[1]
+#updates the repo's TODO.txt file
+TODOList.seek(0)
 
-	main(src_dir)
+	
+	
